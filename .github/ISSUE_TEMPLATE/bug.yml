@@ -1,0 +1,39 @@
+name: Ошибка
+description: Что-то работает не так
+labels: ["ошибка"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Репозиторий публичный.** Только идентификаторы: номер заказа, SKU, ID клиента.
+        Без ФИО, телефонов, адресов, номеров ТТН и скриншотов кабинета.
+        Из логов вырезайте строки подключения и токены.
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Что делали
+      description: Шаги по порядку
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидали и что получили
+    validations:
+      required: true
+
+  - type: input
+    id: where
+    attributes:
+      label: Где
+      placeholder: прод / preview / локально, ветка и хеш коммита
+
+  - type: checkboxes
+    id: pii
+    attributes:
+      label: Персональные данные
+      options:
+        - label: В тексте и логах нет ФИО, телефонов, адресов, номеров ТТН и секретов
+          required: true

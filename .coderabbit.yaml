@@ -1,0 +1,38 @@
+language: ru-RU
+
+tone_instructions: >-
+  Отвечай по-русски, коротко и по делу, без похвал и вводных фраз.
+  Указывай конкретную строку и конкретное последствие, а не общее наблюдение.
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "**/*.{ts,tsx}"
+      instructions: >-
+        Деньги — только целые копейки в bigint; Float и Decimal в денежных полях
+        считать ошибкой. Даты — timestamptz, вывод только через
+        Intl.DateTimeFormat('uk-UA', {timeZone:'Europe/Kyiv'}); рантайм UTC.
+        Любой доступ к данным клиента обязан идти через обёртку packages/db
+        с обязательным accountId — прямой вызов Prisma из apps/ это дыра
+        в разграничении доступа между клиентами, отмечать её всегда.
+        packages/core не должен импортировать React и Next.
+    - path: ".github/workflows/**"
+      instructions: >-
+        Экшены обязаны быть пинованы 40-символьным SHA. Значения ${{ }} нельзя
+        подставлять прямо в run — только через env. paths и paths-ignore
+        запрещены: отфильтрованный обязательный чек навсегда остаётся pending.
+    - path: "**/*.prisma"
+      instructions: >-
+        Деньги — BigInt, время — timestamptz. У каждой таблицы с данными клиента
+        обязан быть accountId и индекс по нему.
+
+chat:
+  auto_reply: true

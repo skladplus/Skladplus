@@ -1,0 +1,20 @@
+name: Установка окружения
+description: >-
+  Node, pnpm и зависимости. Порядок шагов обязателен: pnpm ставится до setup-node,
+  иначе cache=pnpm не находит store. Версия pnpm не указывается — она берётся
+  из поля packageManager, указание в двух местах даёт конфликт.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    # --ignore-scripts: postinstall зависимости выполняться на раннере с токенами
+    # не должен. Нужные сборки вызываются явными шагами.
+    - shell: bash
+      run: pnpm install --frozen-lockfile --ignore-scripts

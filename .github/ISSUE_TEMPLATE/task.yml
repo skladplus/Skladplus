@@ -1,0 +1,46 @@
+name: Задача
+description: Работа, которую нужно сделать
+labels: ["задача"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Репозиторий публичный.** Только идентификаторы: номер заказа, SKU, ID клиента.
+        Без ФИО, телефонов, адресов, номеров ТТН и скриншотов кабинета.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: Что сделать
+      description: Одним абзацем, без решения — решение обсуждается в PR
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Как понять, что готово
+      description: Проверяемый признак, а не «работает»
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Область
+      options:
+        - Товары, поставки, остатки
+        - Заказы, отправки, возвраты
+        - Биллинг и счета
+        - Каркас, CI, инфраструктура
+        - Документы
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pii
+    attributes:
+      label: Персональные данные
+      options:
+        - label: В тексте нет ФИО, телефонов, адресов, номеров ТТН и скриншотов кабинета
+          required: true

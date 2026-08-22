@@ -1,0 +1,244 @@
+name: CI
+
+# paths / paths-ignore здесь запрещены: отфильтрованный обязательный чек
+# навсегда остаётся pending и блокирует PR.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TZ: UTC
+
+jobs:
+  lint:
+    name: Формат и линт
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm exec biome ci .
+
+  typecheck:
+    name: Типы
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  unit:
+    name: Модульные тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm test
+
+  build:
+    name: Сборка
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm -r --if-present db:generate
+      - run: pnpm build
+
+  e2e:
+    name: Сквозные тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Браузер
+        run: |
+          if ls apps/*/playwright.config.* >/dev/null 2>&1; then
+            pnpm exec playwright install --with-deps chromium
+          else
+            echo "конфига Playwright ещё нет — установка браузера пропущена"
+          fi
+      - run: pnpm test:e2e
+
+  db:
+    name: Миграции
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skladplus
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/skladplus
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/skladplus
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm -r --if-present db:generate
+      - run: pnpm db:deploy
+      - run: pnpm db:status
+      # Ловит дрейф «схема правлена, миграция не создана». На пустой схеме зелено.
+      - run: pnpm -r --if-present db:diff
+
+  workflows:
+    name: Проверка workflow
+    runs-on: ubuntu-latest
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          f="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$f" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${f}"
+          echo "${ACTIONLINT_SHA256}  ${f}" | sha256sum -c -
+          tar xzf "$f" actionlint
+          ./actionlint -color
+
+  gitleaks:
+    name: Поиск секретов
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # Бинарь, а не экшен: официальный экшен требует лицензию для организаций.
+      - name: gitleaks
+        run: |
+          set -euo pipefail
+          f="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL -o "$f" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${f}"
+          echo "${GITLEAKS_SHA256}  ${f}" | sha256sum -c -
+          tar xzf "$f" gitleaks
+          ./gitleaks dir . --no-banner --redact --exit-code 1
+
+  authorship:
+    name: Авторство
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: В авторах только люди
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE:-}" ]; then
+            range="${BASE}..${HEAD}"
+          elif [ -n "${BEFORE:-}" ] && ! printf '%s' "$BEFORE" | grep -qE '^0+$'; then
+            range="${BEFORE}..${SHA}"
+          else
+            range="${SHA}"          # первый push в ветку: проверяем один коммит
+          fi
+          n=$(git rev-list --count "$range")
+          echo "диапазон $range, коммитов: $n"
+          # Ассерт: пустая проверка не должна выглядеть как успешная.
+          if [ "$n" -eq 0 ]; then echo "нечего проверять — ошибка диапазона"; exit 1; fi
+          # Только трейлеры, не содержимое файлов: иначе сработает на AGENTS.md,
+          # где запрет процитирован дословно.
+          bad=$(git log --format='%H%n%(trailers:key=Co-authored-by,valueonly)' "$range" \
+                | grep -iE 'claude|anthropic|codex|openai|copilot|cursor' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::AI в трейлерах Co-authored-by. Контрибьюторы — только люди."
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          echo "чисто"
+
+  guards:
+    name: Правила репозитория
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Чужие материалы не в git
+        run: |
+          set -euo pipefail
+          # По факту, а не по строке: macOS хранит кириллицу в NFD, на раннере
+          # имя выглядит иначе. Ловим шаблоном пути и лимитом размера.
+          if git ls-files | grep -iE 'sender|playwright-profile|Login Data|Cookies'; then
+            echo "::error::в git попали чужие материалы"; exit 1
+          fi
+          big=$(git ls-files -z | xargs -0 -r du -k | awk '$1 > 2048 { $1=""; print substr($0,2) }')
+          if [ -n "$big" ]; then
+            echo "::error::файлы больше 2 МБ — так в репозиторий заезжают бандлы:"
+            printf '%s\n' "$big"; exit 1
+          fi
+      - name: Ни pnpm dlx, ни npx
+        run: |
+          set -euo pipefail
+          # Ищем в позиции команды, а не любое вхождение строки: и AGENTS.md,
+          # и scripts/context.sh цитируют этот запрет дословно. Комментарии
+          # отбрасываем по той же причине.
+          pat='(^|[;&|(:"]|&&)[[:space:]]*(pnpm[[:space:]]+dlx[[:space:]]|npx[[:space:]])'
+          hits=$(git ls-files -- '*.yml' '*.yaml' '*.sh' 'package.json' '*/package.json' \
+                 | xargs -r grep -nE "$pat" 2>/dev/null \
+                 | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::разовые запуски через dlx и npx запрещены: резолвят latest на каждом прогоне"
+            printf '%s\n' "$hits"; exit 1
+          fi
+          echo "чисто"
+      - name: Правила не распухли
+        run: |
+          set -euo pipefail
+          n=$(wc -l < AGENTS.md)
+          [ "$n" -le 150 ] || { echo "::error::AGENTS.md $n строк при лимите 150"; exit 1; }
+          c=$(wc -l < CLAUDE.md)
+          [ "$c" -le 20 ] || { echo "::error::CLAUDE.md разросся ($c строк) — он указатель, а не копия"; exit 1; }
+          grep -q 'AGENTS.md' CLAUDE.md || { echo "::error::CLAUDE.md не ссылается на AGENTS.md"; exit 1; }
+          echo "AGENTS.md $n строк, CLAUDE.md $c строк"
+      - name: Ни строк подключения, ни хостов Neon
+        run: |
+          set -euo pipefail
+          hits=$(git ls-files -z | xargs -0 -r grep -nE \
+            'postgres(ql)?://[^[:space:]"'"'"']+@|ep-[a-z0-9-]+\.[a-z0-9-]+\.neon\.tech' 2>/dev/null \
+            | grep -vE '@(localhost|127\.0\.0\.1|postgres|db):' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::строка подключения или хост Neon в репозитории"
+            printf '%s\n' "$hits"; exit 1
+          fi
+
+  ci-ok:
+    name: ci-ok
+    # Единственный обязательный чек. Иначе новый job не станет обязательным
+    # автоматически, а переименование старого молча откроет мерж.
+    needs: [lint, typecheck, unit, build, e2e, db, workflows, gitleaks, authorship, guards]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Итог
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$NEEDS"
+          # Всё, что не success, считается провалом: skipped-джоб — это дыра
+          # в обязательном чеке, а не успех.
+          bad=$(printf '%s' "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success") | "\(.key): \(.value.result)"')
+          if [ -n "$bad" ]; then
+            echo "::error::проверки не прошли:"; printf '%s\n' "$bad"; exit 1
+          fi
+          echo "все проверки зелёные"
