@@ -33,3 +33,26 @@ sha256. CODEOWNERS, dependabot на npm и github-actions, шаблоны PR и 
 **Дальше:** организация, перенос, @Stepandj.
 
 **Открытые вопросы:** ждут ответа заказчика — см. `docs/findings-backlog.md`.
+
+## 2026-08-22 · feat/alex-skeleton · #4 · приложение и слой доступа
+
+**Сделано:** Next 16 с `/api/health`, `packages/db` с Prisma 7 и обёрткой
+`forAccount(accountId)`, `packages/core` без React и Next, docker-compose
+на порту 5433, `scripts/bootstrap.sh`, 13 плагинов в project-scope,
+чистка скиллов (13 security → 3).
+
+**Проверено:** health отдаёт 200 с реальным запросом в базу и 503 без утечки
+хоста · `db:diff` даёт 2 при дрейфе и 0 после отката · `prisma generate`
+работает без переменных окружения · `migrate deploy` идемпотентен ·
+7 контрактных тестов на разграничение клиентов.
+
+**Что поймал CI, а не я:** сгенерированный клиент Prisma нужен каждому джобу,
+а не только сборке. Локально `typecheck` и `unit` проходили на клиенте
+от прошлых запусков.
+
+**Организация:** `skladplus` создана, репозиторий перенесён, @Stepandj владелец.
+Перенос сбросил secret scanning и push protection — возвращено, плюс выставлены
+org-настройки по умолчанию. Доска Projects с пятью колонками привязана к репозиторию.
+
+**Дальше:** CodeRabbit App, Neon, Vercel, Sentry — только через браузер.
+2FA у @Stepandj — самое слабое место защиты.

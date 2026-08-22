@@ -1,0 +1,39 @@
+name: Ревьюер
+
+# CODEOWNERS сам по себе ревью не запрашивает: авто-запрос включается только
+# правилом require_code_owner_review, а оно делает апрув обязательным — то есть
+# создаёт очередь из двух человек, от которой мы отказались осознанно.
+# Этот workflow даёт уведомление без гейта: он ничего не блокирует и не входит
+# в ci-ok.
+#
+# Событие pull_request, а не pull_request_target: код PR здесь не выполняется,
+# а ветки обоих разработчиков лежат в этом же репозитории, поэтому токен
+# получает нужные права без риска, который несёт pull_request_target.
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  request:
+    name: Запросить ревью у второго
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          case "$AUTHOR" in
+            yennned)  other=Stepandj ;;
+            Stepandj) other=yennned ;;
+            *) echo "автор $AUTHOR не из команды (бот?) — пропускаю"; exit 0 ;;
+          esac
+          gh pr edit "$PR" --repo "$REPO" --add-reviewer "$other"
+          echo "ревью запрошено у $other"
