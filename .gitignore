@@ -49,6 +49,8 @@ out/
 coverage/
 *.tsbuildinfo
 .vercel/
+packages/*/src/generated/
+next-env.d.ts
 playwright-report/
 test-results/
 blob-report/

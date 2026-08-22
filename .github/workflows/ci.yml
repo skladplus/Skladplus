@@ -48,7 +48,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - run: pnpm -r --if-present db:generate
       - run: pnpm build
 
   e2e:
@@ -83,10 +82,16 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/skladplus
       DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/skladplus
+      # Отдельная база: prisma migrate diff пересоздаёт её при каждом запуске.
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/skladplus_shadow
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - run: pnpm -r --if-present db:generate
+      - name: Shadow-база для проверки дрейфа
+        run: |
+          set -euo pipefail
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres \
+            -c 'CREATE DATABASE skladplus_shadow'
       - run: pnpm db:deploy
       - run: pnpm db:status
       # Ловит дрейф «схема правлена, миграция не создана». На пустой схеме зелено.
