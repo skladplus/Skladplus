@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Kyiv
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      dev:
+        dependency-type: development
+        update-types: [minor, patch]
+      prod:
+        dependency-type: production
+        update-types: [minor, patch]
+
+  # Без этого блока SHA экшенов застынут навсегда: при sha_pinning_required
+  # обновить их вручную никто не вспомнит.
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/setup"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Kyiv
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]

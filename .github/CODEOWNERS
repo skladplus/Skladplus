@@ -1,0 +1,10 @@
+# Апрув не обязателен — это не гейт, а автоматический запрос ревью:
+# второй узнаёт об изменении, не следя за лентой PR.
+* @yennned @Stepandj
+
+# Общий контракт. PR, трогающий эти пути, помечается [contract]
+# и не мержится, пока второй не на связи.
+/.github/            @yennned @Stepandj
+/AGENTS.md           @yennned @Stepandj
+/packages/db/        @yennned @Stepandj
+/packages/core/      @yennned @Stepandj

@@ -15,6 +15,7 @@
 !/biome.json
 !/docker-compose.yml
 !/.env.example
+!/.coderabbit.yaml
 
 # Документы корня
 !/README.md
