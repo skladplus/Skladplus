@@ -20,8 +20,9 @@ Node — версия из `.nvmrc`, пакетный менеджер — из 
 | Файл | О чём |
 |---|---|
 | [AGENTS.md](AGENTS.md) | Правила работы. Канон: правила, которого нет там, не существует |
-| `docs/01-overview.md` | Что делает продукт — готовит step |
+| [docs/01-overview.md](docs/01-overview.md) | Обзор продукта и текстовая карта разделов |
 | [docs/02-architecture.md](docs/02-architecture.md) | Принятые решения с обоснованием и датой |
+| [docs/03-onboarding.md](docs/03-onboarding.md) | Онбординг клиента от заявки до первой операции |
 | [docs/findings-backlog.md](docs/findings-backlog.md) | Отложенные вопросы по домену |
 
 ## Права
