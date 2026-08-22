@@ -1,0 +1,62 @@
+# ── Deny-by-default ────────────────────────────────────────────────────────
+# Запрещено всё; разрешается только перечисленное ниже. Перечислять запрещённое
+# нельзя: любой новый каталог с чужими данными молча попал бы в git.
+/*
+
+# Конфиги корня
+!/.gitignore
+!/.gitattributes
+!/.editorconfig
+!/.nvmrc
+!/package.json
+!/pnpm-workspace.yaml
+!/pnpm-lock.yaml
+!/tsconfig.base.json
+!/biome.json
+!/docker-compose.yml
+!/.env.example
+
+# Документы корня
+!/README.md
+!/AGENTS.md
+!/CLAUDE.md
+!/CONTRIBUTING.md
+
+# Каталоги проекта
+!/apps/
+!/packages/
+!/docs/
+!/scripts/
+!/PROGRESS/
+!/.github/
+
+# Из .claude коммитится только settings.json. Три строки, а не одна: git не
+# заходит внутрь исключённого каталога, поэтому его сначала надо разрешить.
+!/.claude/
+/.claude/*
+!/.claude/settings.json
+
+# ── Запрещено везде, включая разрешённые каталоги ──────────────────────────
+.DS_Store
+*.pdf
+node_modules/
+.next/
+.turbo/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+.vercel/
+playwright-report/
+test-results/
+blob-report/
+
+# Секреты
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
