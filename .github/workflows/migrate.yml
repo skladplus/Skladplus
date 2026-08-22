@@ -1,0 +1,45 @@
+name: Миграции прода
+
+# Отдельным workflow, а не шагом сборки Vercel: сборка параллельна и кэшируется,
+# из-за чего две миграции могли бы поехать на одну базу. Здесь строгая очередь.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  # Прерывать миграцию на полпути нельзя: база останется в промежуточном
+  # состоянии, а _prisma_migrations запомнит её как незавершённую.
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: prisma migrate deploy
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      # Только прямое подключение: pooled миграции не переживёт.
+      DIRECT_URL: ${{ secrets.NEON_PRODUCTION_DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Проверка, что секрет задан
+        run: |
+          set -euo pipefail
+          if [ -z "${DIRECT_URL:-}" ]; then
+            echo "::error::NEON_PRODUCTION_DIRECT_URL не задан — миграции не поедут молча"
+            exit 1
+          fi
+          echo "секрет на месте"
+
+      - name: Что будет применено
+        run: pnpm --filter @skladplus/db exec prisma migrate status
+
+      - run: pnpm --filter @skladplus/db exec prisma migrate deploy
+
+      - name: Состояние после применения
+        run: pnpm --filter @skladplus/db exec prisma migrate status
