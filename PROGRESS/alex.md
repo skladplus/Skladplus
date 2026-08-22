@@ -16,3 +16,5 @@ Biome 2.5.10), deny-by-default `.gitignore`, `AGENTS.md` как канон пр�
 **Дальше:** организация `skladplus`, перенос репозитория, PR с `.github/`, ruleset.
 
 **Открытые вопросы:** ждут ответа заказчика — см. `docs/findings-backlog.md`.
+
+<!-- синтетическая строка для проверки джоба authorship -->
