@@ -36,10 +36,15 @@ jobs:
           fi
           echo "секрет на месте"
 
+      # Информационно. migrate status по замыслу возвращает ненулевой код,
+      # когда миграции ждут применения, — то есть в штатной ситуации перед
+      # деплоем. Здесь его код не значим, значим вывод в логе.
       - name: Что будет применено
-        run: pnpm --filter @skladplus/db exec prisma migrate status
+        run: pnpm --filter @skladplus/db exec prisma migrate status || true
 
       - run: pnpm --filter @skladplus/db exec prisma migrate deploy
 
+      # А здесь код значим: после deploy неприменённых миграций остаться
+      # не должно, и ненулевой код обязан уронить джоб.
       - name: Состояние после применения
         run: pnpm --filter @skladplus/db exec prisma migrate status
