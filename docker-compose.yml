@@ -1,0 +1,31 @@
+# Локальная база для разработки и для CI-джоба «Миграции».
+# Каркас обязан работать на ней без Vercel и Neon — иначе второй разработчик
+# заблокирован чужими доступами.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: skladplus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skladplus
+      # Рантайм Vercel — UTC, переопределить TZ там нельзя. Держим то же
+      # локально, иначе киевская зона даст зелёные тесты при красном проде.
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      # 5433, а не 5432: на машине разработчика уже может стоять другой Postgres.
+      # Переопределяется переменной SKLADPLUS_DB_PORT.
+      - "${SKLADPLUS_DB_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d skladplus"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  postgres-data:
