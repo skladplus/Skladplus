@@ -329,8 +329,12 @@ preview.
 
 ```bash
 set -a; . ~/.skladplus/env; set +a
-node -e 'fetch("https://<деплой>.vercel.app/api/health",{headers:{"x-vercel-protection-bypass":process.env.VERCEL_AUTOMATION_BYPASS_SECRET}}).then(r=>r.text()).then(console.log)'
+node -e 'fetch("https://<деплой>.vercel.app/api/health",{redirect:"manual",headers:{"x-vercel-protection-bypass":process.env.VERCEL_AUTOMATION_BYPASS_SECRET}}).then(async r=>{if(!r.ok){console.error("HTTP "+r.status);process.exitCode=1;return}console.log(await r.text())}).catch(e=>{console.error(e);process.exitCode=1})'
 ```
+
+`redirect:"manual"` и проверка статуса здесь не украшение: без них неверный
+секрет уводит запрос на страницу входа Vercel, команда печатает её HTML и
+выходит с нулём — ложный успех ровно там, где проверяют обход защиты.
 
 **Это секрет ровно той же силы, что пароль от деплоя:** кто им владеет, тот
 видит preview и production в обход авторизации. Хранится как остальные —
