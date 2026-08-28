@@ -1,0 +1,91 @@
+/*
+ * Дизайн-токены и подключение Tailwind. Файл один — правило `docs/06-ux-ui.md` §4:
+ * компоненты пользуются токенами, прямых цветов в разметке нет.
+ *
+ * Тема одна, светлая. Тёмная не заявлена, и пока её нет, палитра не двоится:
+ * добавить второй набор значений дешевле, чем всё время держать его согласованным.
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --radius: 0.5rem;
+
+  /* Нейтральная основа: интерфейс операционный, цвет в нём несёт статус,
+     а не украшает. Значения в oklch — ровные по светлоте оттенки. */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.21 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0 0);
+  --primary: oklch(0.52 0.16 254);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.21 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+  --accent: oklch(0.96 0.01 254);
+  --accent-foreground: oklch(0.32 0.09 254);
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.92 0 0);
+  --ring: oklch(0.52 0.16 254);
+
+  /* Семантика состояний. Заказ, поставка и SLA раскрашиваются только отсюда:
+     иначе «просрочено» окажется четырьмя разными красными на четырёх экранах. */
+  --success: oklch(0.6 0.13 152);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.79 0.15 78);
+  --warning-foreground: oklch(0.27 0.05 78);
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --info: oklch(0.6 0.12 240);
+  --info-foreground: oklch(0.99 0 0);
+}
+
+/* Значения выше становятся утилитами Tailwind: `bg-background`, `text-warning`.
+   Без этого блока токен остаётся переменной CSS и в классах не виден. */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
