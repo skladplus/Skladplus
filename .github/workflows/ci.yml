@@ -237,25 +237,31 @@ jobs:
           files=$(git ls-files -- 'packages/core' | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
           # Ассерт: проверка, которой нечего читать, не должна выглядеть успешной.
           [ -n "$files" ] || { echo "::error::в packages/core нет исходников — проверка ничего не проверила"; exit 1; }
-          # Ловит импорт, ре-экспорт, require и динамический import — включая
-          # запись через бэктик и пробел перед скобкой. Хвост (кавычка или слэш)
-          # отделяет `next/headers` от постороннего `nextcloud`.
-          pat="(from|require[[:space:]]*\(|import[[:space:]]*\(|^[[:space:]]*import)[[:space:]]*['\"\`](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"\`]|/)"
-          # Строка-комментарий отсекается отдельно: шаблону нечем отличить
-          # упоминание от импорта, а `docs/` и сам этот файл цитируют запрет.
-          drop='^[^:]*:?[0-9]+:[[:space:]]*(//|\*|/\*)'
-          catches() { printf '%s\n' "$1" | grep -nE "$pat" | grep -qvE "$drop"; }
+          # Ищем по строкам вида `файл:номер:код`, поэтому код начинается после
+          # двоеточия, а не с начала строки. Ловятся импорт, ре-экспорт, require
+          # и динамический import — включая бэктик и пробел перед скобкой. Хвост
+          # (кавычка или слэш) отделяет `next/headers` от чужого `nextcloud`.
+          pat="(from|require[[:space:]]*\(|import[[:space:]]*\(|(^|:)[[:space:]]*import)[[:space:]]*['\"\`](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"\`]|/)"
+          # Комментарий — упоминание, а не импорт: хвостовой срезаем, строку
+          # блочного отсеиваем. `docs/` и сам этот файл цитируют запрет дословно.
+          drop='^[^:]*:?[0-9]+:[[:space:]]*(\*|/\*)'
+          scan() { sed -E 's@//.*$@@' | grep -E "$pat" | grep -vE "$drop"; }
+          catches() { printf 'f.ts:1:%s\n' "$1" | scan >/dev/null; }
           must()     { if ! catches "$1"; then echo "::error::шаблон не ловит: $1"; exit 1; fi; }
           must_not() { if catches "$1";   then echo "::error::шаблон ловит лишнее: $1"; exit 1; fi; }
-          # Самопроверка: правило, переставшее ловить, хуже отсутствующего.
+          # Самопроверка на строке с префиксом — ровно в том виде, в каком её
+          # видит поиск. Правило, переставшее ловить, хуже отсутствующего.
           must "import 'react'"
           must "import { headers } from 'next/headers'"
           must "void import(\`react\`)"
           must "require ('react')"
+          must "require('@prisma/client')"
+          must "import ReactDOM from 'react-dom/client'"
           must_not "import { z } from 'zod'"
           must_not "// require('react')"
+          must_not "const x = 1 // require('react')"
           must_not " * ни React, ни Next, ни Prisma — это комментарий"
-          hits=$(printf '%s\n' "$files" | xargs -r grep -nEH "$pat" | grep -vE "$drop" || true)
+          hits=$(printf '%s\n' "$files" | xargs -r awk '{ print FILENAME ":" FNR ":" $0 }' | scan || true)
           if [ -n "$hits" ]; then
             echo "::error::packages/core импортирует фреймворк или базу — зависимости идут только внутрь"
             printf '%s\n' "$hits"; exit 1
