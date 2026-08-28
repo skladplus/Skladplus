@@ -67,7 +67,7 @@
 | Таблица | Поля (ключевое) | Связи / примечания |
 |---|---|---|
 | `ProductCategory` | accountId · name | создаётся «на льоту» из карточки |
-| `Product` | accountId · sku · name · description? · brand? · categoryId? · imageUrl? · priceKop · costKop? · externalId? · isKit (#24) · isVirtual (#50) · minStockThreshold? + lowStockNotify (#51) · noMovementDaysThreshold = 30 (#52) · lengthMm?/widthMm?/heightMm? (от клиента) · measuredVolumeCm3? (замер склада, #58) · archived · `@@unique(accountId, sku)` | объём для тарифа хранения — только `measuredVolumeCm3`; без него зберігання не тарифицируется |
+| `Product` | accountId · sku · name · description? · brand? · categoryId? · imageUrl? · priceKop · costKop? · externalId? · isKit (#24) · isVirtual (#50) · minStockThreshold? + lowStockNotify (#51) · noMovementDaysThreshold = 30 (#52) · lengthMm?/widthMm?/heightMm? (от клиента) · weightG? (целые граммы, от клиента — подсказка для предзаполнения) · measuredVolumeCm3? (замер склада, #58) · archived · `@@unique(accountId, sku)` | `weightG` только предзаполняет вес отправления: фактический вводит склад по весам (`Shipment.weightG`), потому что НП требует его и для расчёта цены, и для создания ТТН; объём для тарифа хранения — только `measuredVolumeCm3`; без него зберігання не тарифицируется |
 | `Barcode` | productId · code · `@@unique(accountId, code)` | до двух на товар — отдельной таблицей |
 | `KitComponent` | kitId → Product · componentId → Product · quantity | состав комплекта (#24); резерв и списание — по компонентам |
 | `Packing` | accountId · sku? · name · barcode? · priceKop? · imageUrl? · onHand | упаковка клиента (#60); пополняется поставкой, списается в заказ |
@@ -88,7 +88,7 @@
 | `OrderItem` | orderId · productId · quantity · priceKop (зафиксирована) · pickedQty = 0 | комиссия — по фактически собранному (#1); комплект хранится строкой комплекта, разворот — при сборке (#24) |
 | `OrderPacking` | orderId · packingId · quantity | использованная упаковка (#60), отмечает менеджер |
 | `Recipient` | type: `PERSON \| COMPANY` · firstName/middleName/lastName · phone · email? · cityRef?/branchRef?/address? · anonymizedAt? | отдельная таблица под обезличивание (#18); журналы не трогаются |
-| `Shipment` | orderId `@unique` (#11) · ttn? · npStatus? (#59) · codInTransitKop? (#53) · handedOverAt? · carrierScanAt? · deliveredAt? | двухстадийный финиш SLA (#4) |
+| `Shipment` | orderId `@unique` (#11) · ttn? · npStatus? (#59) · codInTransitKop? (#53) · weightG · npCostKop? · npCostQuotedAt? · handedOverAt? · carrierScanAt? · deliveredAt? | двухстадийный финиш SLA (#4); `weightG` обязателен — без него НП не создаёт ТТН; `npCostKop` и `npCostQuotedAt` пишутся вместе и только после успешного ответа API при создании ТТН; до этого момента котировка не хранится. Значение справочное: счёт выставляет НП клиенту напрямую (#12) |
 | `OrderStatusEvent` | orderId · from → to · actor (`CLIENT \| STAFF \| SYSTEM`) · actorId? · comment? · createdAt | журнал переходов: «понад 30 хв», SLA-отчёты, статистика |
 | `AssemblyTask` | orderId `@unique` · status (02 §5.5) · assigneeStaffId? · queuedAt · startedAt? · assembledAt? · handedOverAt? · slaDeadlineAt (рабочие минуты) · slaSpentSec (за вычетом пауз) | приоритет не хранится — вычисляется (02 §6); частичный индекс по активным статусам |
 | `AssemblyPause` | taskId · kind: `PAUSE \| PROBLEM` · comment (обязателен) · startedAt · endedAt? · annulledBy? + annulledAt? (#48) | журнал пауз — экран 02 §4.3.9 |
