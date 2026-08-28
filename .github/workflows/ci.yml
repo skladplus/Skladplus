@@ -224,12 +224,39 @@ jobs:
       - name: Абзацы не распухли
         run: |
           set -euo pipefail
-          bad=$(git ls-files -- '*.md' | xargs -r awk '
-            /^```/ { c = !c; n = 0; next }
-            c { next }
-            /^[[:space:]]*$/ || /^[|#>]/ || /^[[:space:]]*[-*]/ || /^[[:space:]]*[0-9]+\./ { n = 0; next }
-            { if (++n == 7) print FILENAME ":" FNR ": абзац длиннее 6 строк" }
-          ')
+          # Блок кода прозой не считается. Открывает его ``` или ~~~ с отступом
+          # до трёх пробелов, закрывает — та же кавычка не короче открывающей.
+          # Состояние сбрасывается на каждом файле: незакрытый блок в одном
+          # иначе выключил бы проверку во всех следующих.
+          check() { awk '
+            FNR == 1 { fence = ""; flen = 0; n = 0 }
+            {
+              line = $0; ind = 0
+              while (ind < 4 && substr(line, 1, 1) == " ") { line = substr(line, 2); ind++ }
+              len = 0
+              if (ind < 4 && (match(line, /^`+/) || match(line, /^~+/))) len = RLENGTH
+              if (len >= 3) {
+                if (fence == "") { fence = substr(line, 1, 1); flen = len; n = 0; next }
+                if (substr(line, 1, 1) == fence && len >= flen) { fence = ""; n = 0; next }
+              }
+              if (fence != "") next
+              if (line ~ /^[[:space:]]*$/ || line ~ /^[|#>]/ || line ~ /^[[:space:]]*[-*]/ \
+                  || line ~ /^[[:space:]]*[0-9]+\./) { n = 0; next }
+              if (++n == 7) print FILENAME ":" FNR ": абзац длиннее 6 строк"
+            }' "$@"; }
+          # Самопроверка образцами: правило, переставшее ловить, хуже отсутствующего.
+          t=$(mktemp -d); q=$(printf '\140\140\140')
+          printf 'a\nb\nc\nd\ne\nf\ng\n' > "$t/long.md"
+          printf '~~~\n1\n2\n3\n4\n5\n6\n7\n~~~\n' > "$t/tilde.md"
+          printf '   %s\n1\n2\n3\n4\n5\n6\n7\n   %s\n' "$q" "$q" > "$t/indent.md"
+          printf '%s\n1\n' "$q" > "$t/unclosed.md"
+          [ -n "$(check "$t/long.md")" ] || { echo "::error::самопроверка: длинный абзац не пойман"; exit 1; }
+          [ -z "$(check "$t/tilde.md" "$t/indent.md")" ] || { echo "::error::самопроверка: блок кода принят за прозу"; exit 1; }
+          [ -n "$(check "$t/unclosed.md" "$t/long.md")" ] || { echo "::error::самопроверка: незакрытый блок гасит следующий файл"; exit 1; }
+          md=()
+          while IFS= read -r f; do md+=("$f"); done < <(git ls-files -- '*.md')
+          [ "${#md[@]}" -gt 0 ] || { echo "::error::нет md-файлов — проверка ничего не проверила"; exit 1; }
+          bad=$(check "${md[@]}")
           [ -z "$bad" ] || { echo "::error::абзац длиннее шести строк"; printf '%s\n' "$bad"; exit 1; }
       - name: packages/core не знает о фреймворке и базе
         run: |
