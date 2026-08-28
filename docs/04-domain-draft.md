@@ -30,18 +30,32 @@
 
 ## A. Идентичность и доступ
 
-Провайдер аутентификации не утверждён (#44, рекомендация better-auth). Таблицы
-`User/Credential/Session` описаны провайдер-агностично: при выборе готового
-провайдера они замещаются его схемой, остальной контекст не меняется.
+Провайдер — **better-auth**: решение принято, строка в `docs/06-architecture.md`,
+пункт #44 закрыт. Пять таблиц блока замещаются его схемой, пять остаются нашими;
+само замещение выполняет задача 1.4, здесь зафиксировано соответствие.
+
+**Замещается схемой better-auth.** Модели `user`, `session`, `account`,
+`verification`; имена моделей задаются конфигурацией, поэтому переименовать
+можно любую сторону.
+
+| Черновик | Чем замещается | Что донастроить |
+|---|---|---|
+| `User` | `user`: id · name · email `@unique` · emailVerified · image · createdAt · updatedAt | `phone` — через `user.additionalFields` |
+| `Credential` | `account.password` при `providerId = "credential"` | argon2id вместо scrypt по умолчанию — своими `password.hash`/`verify` (02 §8) |
+| `Session` | `session`: token `@unique` · expiresAt · ipAddress · userAgent · userId | ничего: «вийти з усіх пристроїв» — удаление строк по `userId` |
+| `PasswordResetToken` | `verification`: identifier · value · expiresAt | TTL ≤ 1 ч — `resetPasswordTokenExpiresIn` |
+| `ContactVerificationToken` | `verification`, та же таблица | различать по `identifier` (02 §4.1.4) |
+
+**Столкновение имён.** У better-auth `account` — связка человека с провайдером
+входа и место хранения пароля; у нас `Account` — клиент-бизнес. Две сущности
+с одним именем в одной схеме читаются неверно, поэтому одна из сторон
+переименовывается в задаче 1.4.
+
+**Остаются нашими.**
 
 | Таблица | Поля (ключевое) | Связи / примечания |
 |---|---|---|
-| `User` | id · email `@unique` · name · phone · createdAt | глобальный человек; без ролей — роли в membership/staff |
-| `Credential` | userId `@unique` · passwordHash (argon2id) · updatedAt | пароль нигде больше не живёт (02 §8) |
-| `Session` | id · userId · tokenHash `@unique` · expiresAt · ip · userAgent · createdAt | серверные сессии; «вийти з усіх» = удалить по userId |
-| `PasswordResetToken` | userId · tokenHash `@unique` · expiresAt · usedAt? | одноразовый, TTL ≤ 1 ч |
-| `ContactVerificationToken` | userId · tokenHash `@unique` · expiresAt · usedAt? | подтверждение email (02 §4.1.4) |
-| `LoginEvent` | userId? · email · ok: Boolean · ip · userAgent · createdAt | журнал входов, питает rate limiting и «Безпеку» в настройках |
+| `LoginEvent` | userId? · email · ok: Boolean · ip · userAgent · createdAt | журнал входов, питает «Безпеку» в настройках; собственный rate limiting better-auth заводит таблицу только при `rateLimit.storage = "database"` |
 | `StaffMember` | userId `@unique` · role: `OWNER \| MANAGER` · active · onShift: Boolean | персонал склада; `onShift` — дежурство в чате (#54); иерархии нет (#21) |
 | `Account` | id · name · legalName · edrpou? · onboardingStatus (02 §5.4) · contactEmail · contactPhone · source? («звідки дізнались») · expectedVolume? · createdAt | клиент-бизнес; `balanceKop` не храним — постоплата (#19), долг считается по счетам |
 | `AccountMembership` | accountId + userId `@@unique` · preset: `CLIENT_OWNER \| OPERATOR \| VIEWER` (#65) · active · invitedAt/acceptedAt | команда клиента |
