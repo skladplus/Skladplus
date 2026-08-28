@@ -261,7 +261,9 @@ jobs:
           must_not "// require('react')"
           must_not "const x = 1 // require('react')"
           must_not " * ни React, ни Next, ни Prisma — это комментарий"
-          hits=$(printf '%s\n' "$files" | xargs -r awk '{ print FILENAME ":" FNR ":" $0 }' | scan || true)
+          # Пустой шаблон `.*` даёт префикс на каждой строке: комментарий срезается
+          # до поиска, значит поиску нужны все строки, а не только совпавшие.
+          hits=$(printf '%s\n' "$files" | xargs -r grep -nH ".*" | scan || true)
           if [ -n "$hits" ]; then
             echo "::error::packages/core импортирует фреймворк или базу — зависимости идут только внутрь"
             printf '%s\n' "$hits"; exit 1
