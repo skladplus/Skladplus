@@ -27,7 +27,7 @@ export class ResourceNotFoundError extends Error {
  * а свойство объекта, через который запрос вообще делается.
  *
  * Механизм обходится прямым вызовом unsafePrisma() — это признано в
- * docs/02-architecture.md. Он не заменяет ревью, он убирает случайную ошибку
+ * docs/06-architecture.md. Он не заменяет ревью, он убирает случайную ошибку
  * и держит доступ в одном месте.
  */
 export class AccountScope {
