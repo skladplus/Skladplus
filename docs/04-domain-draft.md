@@ -88,7 +88,7 @@
 | `OrderItem` | orderId · productId · quantity · priceKop (зафиксирована) · pickedQty = 0 | комиссия — по фактически собранному (#1); комплект хранится строкой комплекта, разворот — при сборке (#24) |
 | `OrderPacking` | orderId · packingId · quantity | использованная упаковка (#60), отмечает менеджер |
 | `Recipient` | type: `PERSON \| COMPANY` · firstName/middleName/lastName · phone · email? · cityRef?/branchRef?/address? · anonymizedAt? | отдельная таблица под обезличивание (#18); журналы не трогаются |
-| `Shipment` | orderId `@unique` (#11) · ttn? · npStatus? (#59) · codInTransitKop? (#53) · handedOverAt? · carrierScanAt? · deliveredAt? | двухстадийный финиш SLA (#4) |
+| `Shipment` | orderId `@unique` (#11) · ttn? · npStatus? (#59) · codInTransitKop? (#53) · npCostKop? · npCostQuotedAt? · handedOverAt? · carrierScanAt? · deliveredAt? | двухстадийный финиш SLA (#4); `npCostKop` — котировка API НП на момент создания ТТН, справочная: счёт выставляет НП клиенту напрямую (#12) |
 | `OrderStatusEvent` | orderId · from → to · actor (`CLIENT \| STAFF \| SYSTEM`) · actorId? · comment? · createdAt | журнал переходов: «понад 30 хв», SLA-отчёты, статистика |
 | `AssemblyTask` | orderId `@unique` · status (02 §5.5) · assigneeStaffId? · queuedAt · startedAt? · assembledAt? · handedOverAt? · slaDeadlineAt (рабочие минуты) · slaSpentSec (за вычетом пауз) | приоритет не хранится — вычисляется (02 §6); частичный индекс по активным статусам |
 | `AssemblyPause` | taskId · kind: `PAUSE \| PROBLEM` · comment (обязателен) · startedAt · endedAt? · annulledBy? + annulledAt? (#48) | журнал пауз — экран 02 §4.3.9 |
