@@ -221,6 +221,8 @@ jobs:
           bad=$(git ls-files -- 'docs/*.md' AGENTS.md README.md \
             | xargs -r grep -nE '^#+ .*(по факту|часть втор|[Уу]точнени|20[0-9]{2}-[0-9]{2}-[0-9]{2})' || true)
           [ -z "$bad" ] || { echo "::error::заголовок-хроника"; printf '%s\n' "$bad"; exit 1; }
+      - name: Номер документа равен порядку чтения
+        run: bash scripts/check-docs.sh
       - name: Абзацы не распухли
         run: |
           set -euo pipefail

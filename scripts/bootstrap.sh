@@ -74,5 +74,5 @@ cat <<'DONE'
   http://127.0.0.1:3000/api/health      проверка живости
   bash scripts/context.sh               ввод в контекст, шаг 0 любой сессии
 
-Правила — в AGENTS.md. Отложенные вопросы — в docs/findings-backlog.md.
+Правила — в AGENTS.md. Отложенные вопросы — в docs/09-findings-backlog.md.
 DONE
