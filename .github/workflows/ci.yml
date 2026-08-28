@@ -231,6 +231,41 @@ jobs:
             { if (++n == 7) print FILENAME ":" FNR ": абзац длиннее 6 строк" }
           ')
           [ -z "$bad" ] || { echo "::error::абзац длиннее шести строк"; printf '%s\n' "$bad"; exit 1; }
+      - name: packages/core не знает о фреймворке и базе
+        run: |
+          set -euo pipefail
+          files=$(git ls-files -- 'packages/core' | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+          # Ассерт: проверка, которой нечего читать, не должна выглядеть успешной.
+          [ -n "$files" ] || { echo "::error::в packages/core нет исходников — проверка ничего не проверила"; exit 1; }
+          # Ловит импорт, ре-экспорт, require и динамический import. Хвост
+          # (кавычка или слэш) отделяет `next/headers` от постороннего `nextcloud`,
+          # а требование from/require — от упоминания React в комментарии.
+          pat="(from|require\(|import\(|^[[:space:]]*import)[[:space:]]*['\"](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"]|/)"
+          # Самопроверка шаблона: правило, переставшее ловить, хуже отсутствующего.
+          if ! printf '%s\n' "import 'react'" | grep -qE "$pat"; then
+            echo "::error::шаблон не ловит побочный импорт"; exit 1
+          fi
+          if printf '%s\n' "import { z } from 'zod'" | grep -qE "$pat"; then
+            echo "::error::шаблон ловит разрешённый пакет"; exit 1
+          fi
+          hits=$(printf '%s\n' "$files" | xargs -r grep -nEH "$pat" || true)
+          if [ -n "$hits" ]; then
+            echo "::error::packages/core импортирует фреймворк или базу — зависимости идут только внутрь"
+            printf '%s\n' "$hits"; exit 1
+          fi
+          # Манифест отдельно: зависимость приезжает и без импорта в src.
+          bad=$(node -e '
+            const p = require("./packages/core/package.json")
+            const all = { ...p.dependencies, ...p.peerDependencies, ...p.devDependencies }
+            const re = /^(react|react-dom|next|prisma|@skladplus\/db)$|^@prisma\//
+            // Самопроверка: scoped-пакет ловится по префиксу, посторонний — нет.
+            if (!re.test("@prisma/client") || re.test("zod")) {
+              console.error("регексп манифеста сломан"); process.exit(1)
+            }
+            console.log(Object.keys(all).filter((n) => re.test(n)).join(" "))
+          ')
+          [ -z "$bad" ] || { echo "::error::в манифесте packages/core запрещённые зависимости: $bad"; exit 1; }
+          echo "чисто, проверено файлов: $(printf '%s\n' "$files" | wc -l | tr -d ' ')"
       - name: Ни строк подключения, ни хостов Neon
         run: |
           set -euo pipefail
