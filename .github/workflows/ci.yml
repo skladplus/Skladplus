@@ -231,6 +231,60 @@ jobs:
             { if (++n == 7) print FILENAME ":" FNR ": абзац длиннее 6 строк" }
           ')
           [ -z "$bad" ] || { echo "::error::абзац длиннее шести строк"; printf '%s\n' "$bad"; exit 1; }
+      - name: packages/core не знает о фреймворке и базе
+        run: |
+          set -euo pipefail
+          files=$(git ls-files -- 'packages/core' | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+          # Ассерт: проверка, которой нечего читать, не должна выглядеть успешной.
+          [ -n "$files" ] || { echo "::error::в packages/core нет исходников — проверка ничего не проверила"; exit 1; }
+          # Ищем по строкам вида `файл:номер:код`, поэтому код начинается после
+          # двоеточия, а не с начала строки. Ловятся импорт, ре-экспорт, require
+          # и динамический import — включая бэктик и пробел перед скобкой. Хвост
+          # (кавычка или слэш) отделяет `next/headers` от чужого `nextcloud`.
+          pat="(from|require[[:space:]]*\(|import[[:space:]]*\(|(^|[:;])[[:space:]]*import)[[:space:]]*['\"\`](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"\`]|/)"
+          # Комментарий — упоминание, а не импорт. Строку целиком отсеивает
+          # `drop`, хвостовой срезается — но только отделённый пробелом: в
+          # `"https://…"` слэши идут за двоеточием, и срез съел бы вместе с
+          # адресом настоящий импорт с той же строки.
+          drop='^[^:]*:?[0-9]+:[[:space:]]*(//|\*|/\*)'
+          scan() { sed -E 's@[[:space:]]//.*$@@' | grep -E "$pat" | grep -vE "$drop"; }
+          catches() { printf 'f.ts:1:%s\n' "$1" | scan >/dev/null; }
+          must()     { if ! catches "$1"; then echo "::error::шаблон не ловит: $1"; exit 1; fi; }
+          must_not() { if catches "$1";   then echo "::error::шаблон ловит лишнее: $1"; exit 1; fi; }
+          # Самопроверка на строке с префиксом — ровно в том виде, в каком её
+          # видит поиск. Правило, переставшее ловить, хуже отсутствующего.
+          must "import 'react'"
+          must "import { headers } from 'next/headers'"
+          must "void import(\`react\`)"
+          must "require ('react')"
+          must "require('@prisma/client')"
+          must "import ReactDOM from 'react-dom/client'"
+          must_not "import { z } from 'zod'"
+          must_not "// require('react')"
+          must "const url = \"https://x.example\"; require(\"react\")"
+          must "const url = 'https://x.example'; import 'react'"
+          must_not "const x = 1 // require('react')"
+          must_not " * ни React, ни Next, ни Prisma — это комментарий"
+          # Пустой шаблон `.*` даёт префикс на каждой строке: комментарий срезается
+          # до поиска, значит поиску нужны все строки, а не только совпавшие.
+          hits=$(printf '%s\n' "$files" | xargs -r grep -nH ".*" | scan || true)
+          if [ -n "$hits" ]; then
+            echo "::error::packages/core импортирует фреймворк или базу — зависимости идут только внутрь"
+            printf '%s\n' "$hits"; exit 1
+          fi
+          # Манифест отдельно: зависимость приезжает и без импорта в src.
+          bad=$(node -e '
+            const p = require("./packages/core/package.json")
+            const all = { ...p.dependencies, ...p.peerDependencies, ...p.devDependencies }
+            const re = /^(react|react-dom|next|prisma|@skladplus\/db)$|^@prisma\//
+            // Самопроверка: scoped-пакет ловится по префиксу, посторонний — нет.
+            if (!re.test("@prisma/client") || re.test("zod")) {
+              console.error("регексп манифеста сломан"); process.exit(1)
+            }
+            console.log(Object.keys(all).filter((n) => re.test(n)).join(" "))
+          ')
+          [ -z "$bad" ] || { echo "::error::в манифесте packages/core запрещённые зависимости: $bad"; exit 1; }
+          echo "чисто, проверено файлов: $(printf '%s\n' "$files" | wc -l | tr -d ' ')"
       - name: Ни строк подключения, ни хостов Neon
         run: |
           set -euo pipefail
