@@ -36,15 +36,16 @@
 
 **Замещается схемой better-auth.** Модели `user`, `session`, `account`,
 `verification`; имена моделей задаются конфигурацией, поэтому переименовать
-можно любую сторону.
+можно любую сторону. Полный состав полей генерируется CLI провайдера —
+здесь только ключевые, чтобы видеть соответствие.
 
 | Черновик | Чем замещается | Что донастроить |
 |---|---|---|
 | `User` | `user`: id · name · email `@unique` · emailVerified · image · createdAt · updatedAt | `phone` — через `user.additionalFields` |
 | `Credential` | `account.password` при `providerId = "credential"` | argon2id вместо scrypt по умолчанию — своими `password.hash`/`verify` (02 §8) |
 | `Session` | `session`: token `@unique` · expiresAt · ipAddress · userAgent · userId | ничего: «вийти з усіх пристроїв» — удаление строк по `userId` |
-| `PasswordResetToken` | `verification`: identifier · value · expiresAt | TTL ≤ 1 ч — `resetPasswordTokenExpiresIn` |
-| `ContactVerificationToken` | `verification`, та же таблица | различать по `identifier` (02 §4.1.4) |
+| `PasswordResetToken` | `verification`: строка с `identifier = "reset-password:<токен>"` | TTL ≤ 1 ч — `resetPasswordTokenExpiresIn` |
+| `ContactVerificationToken` | ничем: ссылка подтверждения — JWT, подписанный секретом сервера, строки в базе нет | срок — `emailVerification.expiresIn`; выданную ссылку нельзя отозвать до истечения, в отличие от строки (02 §4.1.4) |
 
 **Столкновение имён.** У better-auth `account` — связка человека с провайдером
 входа и место хранения пароля; у нас `Account` — клиент-бизнес. Две сущности
