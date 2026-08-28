@@ -14,8 +14,8 @@
 Веб-платформа фулфилмента для склада в Харьковской области; заменяет связку
 «Google-таблица + чат + Telegram-бот». Двое, оба фулстек, права равные:
 `alex` (@yennned, Claude Code) и `step` (@Stepandj, Codex).
-Обзор — `docs/01-overview.md`, решения — `docs/06-architecture.md`,
-отложенное — `docs/09-findings-backlog.md`.
+Обзор — `docs/01-overview.md` (готовит step, файла пока нет), решения —
+`docs/06-architecture.md`, отложенное — `docs/09-findings-backlog.md`.
 
 ## Запреты — нарушение роняет CI
 
