@@ -1,7 +1,7 @@
 # 04 — Черновик доменной схемы
 
 Черновик таблиц Prisma до первой миграции. Поведение и права — в
-`docs/02-product-spec.md` (§-ссылки ниже); ответы опросника и отложенное —
+`docs/02-product-spec.md` (§-ссылки ниже); ответы и отложенное —
 `docs/09-findings-backlog.md`, принятые решения — `docs/06-architecture.md`.
 `#N` — номер пункта бэклога, ссылка на GitHub идёт со словом (`PR #23`,
 `issue #16`).
@@ -84,7 +84,7 @@
 
 | Таблица | Поля (ключевое) | Связи / примечания |
 |---|---|---|
-| `Order` | accountId · number · channel: `CABINET \| MANUAL \| CRM \| PROM \| ROZETKA` · externalId? · `@@unique(accountId, channel, externalId)` (#43) · status: 02 §5.1 (`DRAFT`+17) · shipperProfileId · recipientId · paymentType: `FULL \| PREPAID \| COD` · totalKop · prepaidKop? · declaredValueKop? · deliveryPayer · codPayer? · assemblyComment? · awaitingCall: Boolean · createdAt | цена позиций фиксируется при создании (#6) |
+| `Order` | accountId · number · channel: `CABINET \| MANUAL \| CRM \| PROM \| ROZETKA` · externalId? · `@@unique(accountId, channel, externalId)` (#43) · status: 02 §5.1 (`DRAFT`+17) · shipperProfileId · recipientId · paymentType: `FULL \| PREPAID \| COD` · totalKop · prepaidKop? · declaredValueKop? · deliveryPayer · codPayer? · assemblyComment? · awaitingCall: Boolean · reshipmentOfId? · createdAt | цена позиций фиксируется при создании (#6); `reshipmentOfId?` — self-relation: повторная отправка ссылается на исходный заказ (#26) |
 | `OrderItem` | orderId · productId · quantity · priceKop (зафиксирована) · pickedQty = 0 | комиссия — по фактически собранному (#1); комплект хранится строкой комплекта, разворот — при сборке (#24) |
 | `OrderPacking` | orderId · packingId · quantity | использованная упаковка (#60), отмечает менеджер |
 | `Recipient` | type: `PERSON \| COMPANY` · firstName/middleName/lastName · phone · email? · cityRef?/branchRef?/address? · anonymizedAt? | отдельная таблица под обезличивание (#18); журналы не трогаются |
@@ -142,9 +142,6 @@
 | # | Что может измениться |
 |---|---|
 | #22 ↷ | цены типов возвратов — только `TariffLine`, структура готова |
-| #26 | повторная отправка: новый `Order` со ссылкой на исходный или продолжение — появится поле `reshipmentOfId?` |
-| #28 | блокировки при OVERDUE — поле/флаги на `Account` |
-| #33 | подтверждение списаний — возможен статус у `ReturnItem.resolution` |
 | #44 | провайдер auth — замена таблиц блока A (User/Credential/Session) |
 | #47 ↷ | формула комиссий — только значения ставок, каркас готов |
 | #58 | если замер объёма окажется не при приёмке — переедет поле `measuredVolumeCm3` |
