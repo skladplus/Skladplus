@@ -44,7 +44,7 @@
 | `User` | `user`: id · name · email `@unique` · emailVerified · image · createdAt · updatedAt | `phone` — через `user.additionalFields` |
 | `Credential` | `account.password` при `providerId = "credential"` | argon2id вместо scrypt по умолчанию — своими `password.hash`/`verify` (02 §8) |
 | `Session` | `session`: token `@unique` · expiresAt · ipAddress · userAgent · userId | ничего: «вийти з усіх пристроїв» — удаление строк по `userId` |
-| `PasswordResetToken` | `verification`: строка с `identifier = "reset-password:<токен>"` | TTL ≤ 1 ч — `resetPasswordTokenExpiresIn` |
+| `PasswordResetToken` | `verification`: строка с `identifier = "reset-password:<токен>"` | TTL ≤ 1 ч — `resetPasswordTokenExpiresIn`; хранить хешем — `verification.storeIdentifier: "hashed"` (02 §8) |
 | `ContactVerificationToken` | ничем: ссылка подтверждения — JWT, подписанный секретом сервера, строки в базе нет | срок — `emailVerification.expiresIn`; выданную ссылку нельзя отозвать до истечения, в отличие от строки (02 §4.1.4) |
 
 **Столкновение имён.** У better-auth `account` — связка человека с провайдером
