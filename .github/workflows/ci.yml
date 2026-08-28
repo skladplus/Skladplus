@@ -250,7 +250,7 @@ jobs:
           # Самопроверка: правило, переставшее ловить, хуже отсутствующего.
           must "import 'react'"
           must "import { headers } from 'next/headers'"
-          must 'void import(`react`)'
+          must "void import(\`react\`)"
           must "require ('react')"
           must_not "import { z } from 'zod'"
           must_not "// require('react')"
