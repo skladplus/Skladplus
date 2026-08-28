@@ -1,10 +1,14 @@
 # 04 — Черновик доменной схемы
 
 Черновик таблиц Prisma до первой миграции. Поведение и права — в
-`docs/02-product-spec.md` (§-ссылки ниже); решения — `docs/09-findings-backlog.md`
-(#NN). Пункты, где ответ заказчика может изменить структуру, помечены
-`заблокировано #NN` — такие таблицы закладываются, но их наполнение не
-реализуется до ответа.
+`docs/02-product-spec.md` (§-ссылки ниже); ответы опросника и отложенное —
+`docs/09-findings-backlog.md`, принятые решения — `docs/06-architecture.md`.
+`#N` — номер пункта бэклога, ссылка на GitHub идёт со словом (`PR #23`,
+`issue #16`).
+
+Пункты, где ответ заказчика может изменить структуру, помечены
+`заблокировано #N` — такие таблицы закладываются, но их наполнение
+не реализуется до ответа.
 
 ## Сквозные конвенции
 
@@ -26,18 +30,33 @@
 
 ## A. Идентичность и доступ
 
-Провайдер аутентификации не утверждён (#44, рекомендация better-auth). Таблицы
-`User/Credential/Session` описаны провайдер-агностично: при выборе готового
-провайдера они замещаются его схемой, остальной контекст не меняется.
+Провайдер — **better-auth**: решение принято, строка в `docs/06-architecture.md`,
+пункт #44 закрыт. Пять таблиц блока замещаются его схемой, пять остаются нашими;
+само замещение выполняет задача 1.4, здесь зафиксировано соответствие.
+
+**Замещается схемой better-auth.** Модели `user`, `session`, `account`,
+`verification`; имена моделей задаются конфигурацией, поэтому переименовать
+можно любую сторону. Полный состав полей генерируется CLI провайдера —
+здесь только ключевые, чтобы видеть соответствие.
+
+| Черновик | Чем замещается | Что донастроить |
+|---|---|---|
+| `User` | `user`: id · name · email `@unique` · emailVerified · image · createdAt · updatedAt | `phone` — через `user.additionalFields` |
+| `Credential` | `account.password` при `providerId = "credential"` | argon2id вместо scrypt по умолчанию — своими `password.hash`/`verify` (02 §8) |
+| `Session` | `session`: token `@unique` · expiresAt · ipAddress · userAgent · userId | ничего: «вийти з усіх пристроїв» — удаление строк по `userId` |
+| `PasswordResetToken` | `verification`: строка с `identifier = "reset-password:<токен>"` | TTL ≤ 1 ч — `resetPasswordTokenExpiresIn`; хранить хешем — `verification.storeIdentifier: "hashed"` (02 §8) |
+| `ContactVerificationToken` | ничем: ссылка подтверждения — JWT, подписанный секретом сервера, строки в базе нет | срок — `emailVerification.expiresIn`; выданную ссылку нельзя отозвать до истечения, в отличие от строки (02 §4.1.4) |
+
+**Столкновение имён.** У better-auth `account` — связка человека с провайдером
+входа и место хранения пароля; у нас `Account` — клиент-бизнес. Две сущности
+с одним именем в одной схеме читаются неверно, поэтому одна из сторон
+переименовывается в задаче 1.4.
+
+**Остаются нашими.**
 
 | Таблица | Поля (ключевое) | Связи / примечания |
 |---|---|---|
-| `User` | id · email `@unique` · name · phone · createdAt | глобальный человек; без ролей — роли в membership/staff |
-| `Credential` | userId `@unique` · passwordHash (argon2id) · updatedAt | пароль нигде больше не живёт (02 §8) |
-| `Session` | id · userId · tokenHash `@unique` · expiresAt · ip · userAgent · createdAt | серверные сессии; «вийти з усіх» = удалить по userId |
-| `PasswordResetToken` | userId · tokenHash `@unique` · expiresAt · usedAt? | одноразовый, TTL ≤ 1 ч |
-| `ContactVerificationToken` | userId · tokenHash `@unique` · expiresAt · usedAt? | подтверждение email (02 §4.1.4) |
-| `LoginEvent` | userId? · email · ok: Boolean · ip · userAgent · createdAt | журнал входов, питает rate limiting и «Безпеку» в настройках |
+| `LoginEvent` | userId? · email · ok: Boolean · ip · userAgent · createdAt | журнал входов, питает «Безпеку» в настройках; собственный rate limiting better-auth заводит таблицу только при `rateLimit.storage = "database"` |
 | `StaffMember` | userId `@unique` · role: `OWNER \| MANAGER` · active · onShift: Boolean | персонал склада; `onShift` — дежурство в чате (#54); иерархии нет (#21) |
 | `Account` | id · name · legalName · edrpou? · onboardingStatus (02 §5.4) · contactEmail · contactPhone · source? («звідки дізнались») · expectedVolume? · createdAt | клиент-бизнес; `balanceKop` не храним — постоплата (#19), долг считается по счетам |
 | `AccountMembership` | accountId + userId `@@unique` · preset: `CLIENT_OWNER \| OPERATOR \| VIEWER` (#65) · active · invitedAt/acceptedAt | команда клиента |
@@ -114,7 +133,7 @@
   externalId)` уже сейчас (#43).
 - СМС-шаблоны (#62), фискализация (#61), рейтинг получателя (#63), публичные
   API-ключи (#64) — после MVP.
-- 2FA-поля персонала (#66) — вместе с выбором провайдера (#44).
+- 2FA-поля персонала (#66) — вместе с реализацией better-auth, задача 1.4.
 - Документооборот (акты как документы, претензии, #15) — форма актов
   заблокирована; данные для них уже есть (`SupplyItem`, `InventoryLine`).
 
