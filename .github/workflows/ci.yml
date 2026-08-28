@@ -215,6 +215,22 @@ jobs:
           [ "$c" -le 20 ] || { echo "::error::CLAUDE.md разросся ($c строк) — он указатель, а не копия"; exit 1; }
           grep -q 'AGENTS.md' CLAUDE.md || { echo "::error::CLAUDE.md не ссылается на AGENTS.md"; exit 1; }
           echo "AGENTS.md $n строк, CLAUDE.md $c строк"
+      - name: Документы — состояние, а не хроника
+        run: |
+          set -euo pipefail
+          bad=$(git ls-files -- 'docs/*.md' AGENTS.md README.md \
+            | xargs -r grep -nE '^#+ .*(по факту|часть втор|[Уу]точнени|20[0-9]{2}-[0-9]{2}-[0-9]{2})' || true)
+          [ -z "$bad" ] || { echo "::error::заголовок-хроника"; printf '%s\n' "$bad"; exit 1; }
+      - name: Абзацы не распухли
+        run: |
+          set -euo pipefail
+          bad=$(git ls-files -- '*.md' | xargs -r awk '
+            /^```/ { c = !c; n = 0; next }
+            c { next }
+            /^[[:space:]]*$/ || /^[|#>]/ || /^[[:space:]]*[-*]/ || /^[[:space:]]*[0-9]+\./ { n = 0; next }
+            { if (++n == 7) print FILENAME ":" FNR ": абзац длиннее 6 строк" }
+          ')
+          [ -z "$bad" ] || { echo "::error::абзац длиннее шести строк"; printf '%s\n' "$bad"; exit 1; }
       - name: Ни строк подключения, ни хостов Neon
         run: |
           set -euo pipefail
