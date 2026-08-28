@@ -34,7 +34,16 @@
       "Read(//Users/*/.skladplus/**)",
       "Read(//Users/*/.npmrc)",
       "Read(//Users/*/.vercel/**)",
-      "Read(//Users/*/.docker/config.json)"
+      "Read(//Users/*/.docker/config.json)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/Desktop/NovaPostBot/**)",
+      "Read(~/.skladplus/**)",
+      "Read(~/.npmrc)",
+      "Read(~/.vercel/**)",
+      "Read(~/.docker/config.json)",
+      "Read(./**/.env.*)"
     ],
     "ask": [
       "Read(./**/node_modules/**)",
@@ -70,7 +79,8 @@
       "Read(./**/*.ttf)",
       "Read(./**/*.otf)",
       "Read(./.env.example)",
-      "Read(./**/.env.example)"
+      "Read(./**/.env.example)",
+      "Read(./**/.env.*)"
     ]
   },
   "hooks": {
