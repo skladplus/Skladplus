@@ -215,6 +215,30 @@ jobs:
           [ "$c" -le 20 ] || { echo "::error::CLAUDE.md разросся ($c строк) — он указатель, а не копия"; exit 1; }
           grep -q 'AGENTS.md' CLAUDE.md || { echo "::error::CLAUDE.md не ссылается на AGENTS.md"; exit 1; }
           echo "AGENTS.md $n строк, CLAUDE.md $c строк"
+      - name: Абзацы не распухли
+        run: |
+          set -euo pipefail
+          # Соглашение по документам из AGENTS.md: прозаический абзац — не
+          # длиннее шести строк. Проза — блок строк вне код-фенсов, не
+          # начинающийся с заголовка, таблицы, списка, цитаты или отступа.
+          # PROGRESS/ не проверяется: журнал — хроника, ей и остаётся.
+          fail=0
+          for f in AGENTS.md CLAUDE.md docs/*.md; do
+            awk -v f="$f" '
+              function flush() { if (n > 6) { printf "%s:%d: абзац %d строк при лимите 6\n", f, start, n; bad = 1 } n = 0 }
+              /^```/ { fence = !fence; flush(); next }
+              fence { next }
+              /^[[:space:]]*$/ { flush(); next }
+              /^(#|\||>|[-*+] |[0-9]+\. |[[:space:]])/ { flush(); next }
+              { if (n == 0) start = FNR; n++ }
+              END { flush(); exit bad }
+            ' "$f" || fail=1
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::абзац длиннее шести строк — это две мысли или перечисление, потерявшее строки (AGENTS.md, «Соглашения по документам»)"
+            exit 1
+          fi
+          echo "абзацы в норме"
       - name: Ни строк подключения, ни хостов Neon
         run: |
           set -euo pipefail
