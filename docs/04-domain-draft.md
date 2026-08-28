@@ -92,7 +92,7 @@
 | `OrderStatusEvent` | orderId · from → to · actor (`CLIENT \| STAFF \| SYSTEM`) · actorId? · comment? · createdAt | журнал переходов: «понад 30 хв», SLA-отчёты, статистика |
 | `AssemblyTask` | orderId `@unique` · status (02 §5.5) · assigneeStaffId? · queuedAt · startedAt? · assembledAt? · handedOverAt? · slaDeadlineAt (рабочие минуты) · slaSpentSec (за вычетом пауз) | приоритет не хранится — вычисляется (02 §6); частичный индекс по активным статусам |
 | `AssemblyPause` | taskId · kind: `PAUSE \| PROBLEM` · comment (обязателен) · startedAt · endedAt? · annulledBy? + annulledAt? (#48) | журнал пауз — экран 02 §4.3.9 |
-| `AssemblyItemPick` | taskId · orderItemId · componentProductId? (для комплектов) · pickedQty · scannedBarcode? · pickedAt | закладка под сканер |
+| `AssemblyItemPick` | taskId · orderItemId · componentProductId? (для комплектов) · pickedQty · pickedAt | сканирование не используется, поля под него нет (#84) |
 | `Return` | accountId · orderId · number · kind: `REFUSAL \| POST_DELIVERY` (#22) · status (02 §5.2) · returnTtn? · totalKop? · createdAt | |
 | `ReturnItem` | returnId · orderItemId · quantity · condition: `OK \| DAMAGED \| MISSING` · resolution: `RESTOCK \| WRITE_OFF`? · photoUrl? | списание — #33 (заблокировано подтверждение) |
 | `ReturnComment` | returnId · authorType/authorId · text · createdAt | лента комментариев |
