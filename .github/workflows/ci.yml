@@ -241,11 +241,13 @@ jobs:
           # двоеточия, а не с начала строки. Ловятся импорт, ре-экспорт, require
           # и динамический import — включая бэктик и пробел перед скобкой. Хвост
           # (кавычка или слэш) отделяет `next/headers` от чужого `nextcloud`.
-          pat="(from|require[[:space:]]*\(|import[[:space:]]*\(|(^|:)[[:space:]]*import)[[:space:]]*['\"\`](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"\`]|/)"
-          # Комментарий — упоминание, а не импорт: хвостовой срезаем, строку
-          # блочного отсеиваем. `docs/` и сам этот файл цитируют запрет дословно.
-          drop='^[^:]*:?[0-9]+:[[:space:]]*(\*|/\*)'
-          scan() { sed -E 's@//.*$@@' | grep -E "$pat" | grep -vE "$drop"; }
+          pat="(from|require[[:space:]]*\(|import[[:space:]]*\(|(^|[:;])[[:space:]]*import)[[:space:]]*['\"\`](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"\`]|/)"
+          # Комментарий — упоминание, а не импорт. Строку целиком отсеивает
+          # `drop`, хвостовой срезается — но только отделённый пробелом: в
+          # `"https://…"` слэши идут за двоеточием, и срез съел бы вместе с
+          # адресом настоящий импорт с той же строки.
+          drop='^[^:]*:?[0-9]+:[[:space:]]*(//|\*|/\*)'
+          scan() { sed -E 's@[[:space:]]//.*$@@' | grep -E "$pat" | grep -vE "$drop"; }
           catches() { printf 'f.ts:1:%s\n' "$1" | scan >/dev/null; }
           must()     { if ! catches "$1"; then echo "::error::шаблон не ловит: $1"; exit 1; fi; }
           must_not() { if catches "$1";   then echo "::error::шаблон ловит лишнее: $1"; exit 1; fi; }
@@ -259,6 +261,8 @@ jobs:
           must "import ReactDOM from 'react-dom/client'"
           must_not "import { z } from 'zod'"
           must_not "// require('react')"
+          must "const url = \"https://x.example\"; require(\"react\")"
+          must "const url = 'https://x.example'; import 'react'"
           must_not "const x = 1 // require('react')"
           must_not " * ни React, ни Next, ни Prisma — это комментарий"
           # Пустой шаблон `.*` даёт префикс на каждой строке: комментарий срезается
