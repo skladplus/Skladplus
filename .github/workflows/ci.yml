@@ -225,7 +225,8 @@ jobs:
         run: |
           set -euo pipefail
           # Блок кода прозой не считается. Открывает его ``` или ~~~ с отступом
-          # до трёх пробелов, закрывает — та же кавычка не короче открывающей.
+          # до трёх пробелов, закрывает — та же кавычка не короче открывающей и
+          # без хвоста: ```json внутри блока открывает подсветку, а не закрывает.
           # Состояние сбрасывается на каждом файле: незакрытый блок в одном
           # иначе выключил бы проверку во всех следующих.
           check() { awk '
@@ -237,7 +238,8 @@ jobs:
               if (ind < 4 && (match(line, /^`+/) || match(line, /^~+/))) len = RLENGTH
               if (len >= 3) {
                 if (fence == "") { fence = substr(line, 1, 1); flen = len; n = 0; next }
-                if (substr(line, 1, 1) == fence && len >= flen) { fence = ""; n = 0; next }
+                if (substr(line, 1, 1) == fence && len >= flen &&
+                    substr(line, len + 1) ~ /^[[:space:]]*$/) { fence = ""; n = 0; next }
               }
               if (fence != "") next
               if (line ~ /^[[:space:]]*$/ || line ~ /^[|#>]/ || line ~ /^[[:space:]]*[-*]/ \
@@ -250,8 +252,9 @@ jobs:
           printf '~~~\n1\n2\n3\n4\n5\n6\n7\n~~~\n' > "$t/tilde.md"
           printf '   %s\n1\n2\n3\n4\n5\n6\n7\n   %s\n' "$q" "$q" > "$t/indent.md"
           printf '%s\n1\n' "$q" > "$t/unclosed.md"
+          printf '%sjs\n1\n%sjson\n2\n3\n4\n5\n6\n7\n8\n%s\n' "$q" "$q" "$q" > "$t/info.md"
           [ -n "$(check "$t/long.md")" ] || { echo "::error::самопроверка: длинный абзац не пойман"; exit 1; }
-          [ -z "$(check "$t/tilde.md" "$t/indent.md")" ] || { echo "::error::самопроверка: блок кода принят за прозу"; exit 1; }
+          [ -z "$(check "$t/tilde.md" "$t/indent.md" "$t/info.md")" ] || { echo "::error::самопроверка: блок кода принят за прозу"; exit 1; }
           [ -n "$(check "$t/unclosed.md" "$t/long.md")" ] || { echo "::error::самопроверка: незакрытый блок гасит следующий файл"; exit 1; }
           md=()
           while IFS= read -r f; do md+=("$f"); done < <(git ls-files -- '*.md')
