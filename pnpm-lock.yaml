@@ -14,6 +14,9 @@ importers:
       '@biomejs/biome':
         specifier: 2.5.10
         version: 2.5.10
+      shadcn:
+        specifier: 4.19.0
+        version: 4.19.0(typescript@7.0.2)
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -57,9 +60,6 @@ importers:
       postcss:
         specifier: 8.5.26
         version: 8.5.26
-      shadcn:
-        specifier: 4.19.0
-        version: 4.19.0(typescript@7.0.2)
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
