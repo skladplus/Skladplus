@@ -67,7 +67,7 @@
 | Таблица | Поля (ключевое) | Связи / примечания |
 |---|---|---|
 | `ProductCategory` | accountId · name | создаётся «на льоту» из карточки |
-| `Product` | accountId · sku · name · description? · brand? · categoryId? · imageUrl? · priceKop · costKop? · externalId? · isKit (#24) · isVirtual (#50) · minStockThreshold? + lowStockNotify (#51) · noMovementDaysThreshold = 30 (#52) · lengthMm?/widthMm?/heightMm? (от клиента) · measuredVolumeCm3? (замер склада, #58) · archived · `@@unique(accountId, sku)` | объём для тарифа хранения — только `measuredVolumeCm3`; без него зберігання не тарифицируется |
+| `Product` | accountId · sku · name · description? · brand? · categoryId? · imageUrl? · priceKop · costKop? · externalId? · isKit (#24) · isVirtual (#50) · minStockThreshold? + lowStockNotify (#51) · noMovementDaysThreshold = 30 (#52) · lengthMm?/widthMm?/heightMm? (от клиента) · weightG? (целые граммы, от клиента) · measuredVolumeCm3? (замер склада, #58) · archived · `@@unique(accountId, sku)` | вес отправления — сумма `weightG` по позициям, для котировки НП; объём для тарифа хранения — только `measuredVolumeCm3`; без него зберігання не тарифицируется |
 | `Barcode` | productId · code · `@@unique(accountId, code)` | до двух на товар — отдельной таблицей |
 | `KitComponent` | kitId → Product · componentId → Product · quantity | состав комплекта (#24); резерв и списание — по компонентам |
 | `Packing` | accountId · sku? · name · barcode? · priceKop? · imageUrl? · onHand | упаковка клиента (#60); пополняется поставкой, списается в заказ |
