@@ -237,18 +237,25 @@ jobs:
           files=$(git ls-files -- 'packages/core' | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
           # Ассерт: проверка, которой нечего читать, не должна выглядеть успешной.
           [ -n "$files" ] || { echo "::error::в packages/core нет исходников — проверка ничего не проверила"; exit 1; }
-          # Ловит импорт, ре-экспорт, require и динамический import. Хвост
-          # (кавычка или слэш) отделяет `next/headers` от постороннего `nextcloud`,
-          # а требование from/require — от упоминания React в комментарии.
-          pat="(from|require\(|import\(|^[[:space:]]*import)[[:space:]]*['\"](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"]|/)"
-          # Самопроверка шаблона: правило, переставшее ловить, хуже отсутствующего.
-          if ! printf '%s\n' "import 'react'" | grep -qE "$pat"; then
-            echo "::error::шаблон не ловит побочный импорт"; exit 1
-          fi
-          if printf '%s\n' "import { z } from 'zod'" | grep -qE "$pat"; then
-            echo "::error::шаблон ловит разрешённый пакет"; exit 1
-          fi
-          hits=$(printf '%s\n' "$files" | xargs -r grep -nEH "$pat" || true)
+          # Ловит импорт, ре-экспорт, require и динамический import — включая
+          # запись через бэктик и пробел перед скобкой. Хвост (кавычка или слэш)
+          # отделяет `next/headers` от постороннего `nextcloud`.
+          pat="(from|require[[:space:]]*\(|import[[:space:]]*\(|^[[:space:]]*import)[[:space:]]*['\"\`](react|react-dom|next|prisma|@prisma|@skladplus/db)(['\"\`]|/)"
+          # Строка-комментарий отсекается отдельно: шаблону нечем отличить
+          # упоминание от импорта, а `docs/` и сам этот файл цитируют запрет.
+          drop='^[^:]*:?[0-9]+:[[:space:]]*(//|\*|/\*)'
+          catches() { printf '%s\n' "$1" | grep -nE "$pat" | grep -qvE "$drop"; }
+          must()     { if ! catches "$1"; then echo "::error::шаблон не ловит: $1"; exit 1; fi; }
+          must_not() { if catches "$1";   then echo "::error::шаблон ловит лишнее: $1"; exit 1; fi; }
+          # Самопроверка: правило, переставшее ловить, хуже отсутствующего.
+          must "import 'react'"
+          must "import { headers } from 'next/headers'"
+          must 'void import(`react`)'
+          must "require ('react')"
+          must_not "import { z } from 'zod'"
+          must_not "// require('react')"
+          must_not " * ни React, ни Next, ни Prisma — это комментарий"
+          hits=$(printf '%s\n' "$files" | xargs -r grep -nEH "$pat" | grep -vE "$drop" || true)
           if [ -n "$hits" ]; then
             echo "::error::packages/core импортирует фреймворк или базу — зависимости идут только внутрь"
             printf '%s\n' "$hits"; exit 1
