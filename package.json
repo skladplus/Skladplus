@@ -25,8 +25,8 @@
     "context": "bash scripts/context.sh"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.10",
-    "shadcn": "4.19.0",
+    "@biomejs/biome": "2.5.12",
+    "shadcn": "4.21.0",
     "typescript": "7.0.2"
   },
   "pnpm": {
